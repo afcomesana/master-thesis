@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+
+# Django stuff:
+*.log
+
+# Environments
+.env
+venv/
+
+# pytype static type analyzer
+.pytype/
+
+# PyPI configuration file
+.pypirc
+
+# Pytorch trained models
+*.pt
+*.pth
+
+
+# Mac stuff
+.DS_Store
+
+# Development directories
+test-images
+nstemi_omi
+andreas-api
+
+.gitignore-*
+README.Docker.md
