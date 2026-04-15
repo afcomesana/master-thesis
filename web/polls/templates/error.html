@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Something went wrong — ECG Study{% endblock %}
+
+{% block content %}
+<div style="text-align: center; max-width: 480px;">
+    <p style="font-family: 'DM Mono', monospace; font-size: 11px; 
+              letter-spacing: 0.16em; color: var(--accent); 
+              text-transform: uppercase; margin-bottom: 1.5rem;">
+        Unexpected error
+    </p>
+    <p style="font-size: 1.5rem; font-weight: 300; 
+              margin-bottom: 1rem; color: var(--ink);">
+        Something went wrong saving your answer.
+    </p>
+    <p style="font-size: 1.1rem; font-weight: 300; 
+              color: var(--ink-muted); line-height: 1.7; margin-bottom: 2.5rem;">
+        Please go back and try again. If the problem persists,
+        try refreshing the page.
+    </p>
+    <a href="javascript:history.back()" 
+       style="font-family: 'DM Mono', monospace; font-size: 12px;
+              letter-spacing: 0.12em; text-transform: uppercase;
+              color: var(--cream); background: var(--accent);
+              padding: 0.9rem 2rem; text-decoration: none;
+              border-radius: 2px; display: inline-block;">
+        Go back
+    </a>
+</div>
+{% endblock %}

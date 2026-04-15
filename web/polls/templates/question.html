@@ -1,0 +1,538 @@
+{% extends 'base.html' %}
+
+{% block title %}Question {{ question.id }} — ECG Study{% endblock %}
+
+{% block extra_styles %}
+.question-wrapper {
+    max-width: 580px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: .5rem;
+    align-self: flex-start;
+}
+
+.progress-step {
+    width: 28px;
+    height: 2px;
+    background: var(--rule);
+    border-radius: 1px;
+    transition: background 0.3s ease;
+}
+
+.progress-step.active {
+    background: var(--accent);
+}
+
+.progress-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-left: 0.25rem;
+}
+
+.question-text {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 300;
+    line-height: 1.4;
+    color: var(--ink);
+    margin-bottom: 1rem;
+    align-self: flex-start;
+}
+
+.question-text em {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    font-style: italic;
+    color: var(--accent);
+}
+
+.divider {
+    width: 100%;
+    height: 0.5px;
+    background: var(--rule);
+    margin-bottom: 1rem;
+}
+
+textarea {
+    width: 100%;
+    min-height: 160px;
+    background: transparent;
+    border: 0.5px solid var(--rule);
+    border-radius: 2px;
+    padding: 1.25rem 1.5rem;
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--ink);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s ease;
+    margin-bottom: 0.75rem;
+}
+
+textarea::placeholder {
+    color: var(--ink-faint);
+    font-style: italic;
+}
+
+textarea:focus {
+    border-color: var(--accent);
+}
+
+.char-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    align-self: flex-end;
+    margin-bottom: 2.5rem;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.choices {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.next-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 2rem;
+    background: var(--accent);
+    color: var(--cream);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.next-button:hover {
+    background: #1e3850;
+    transform: translateY(-1px);
+}
+
+.next-button:active {
+    transform: translateY(0);
+}
+
+.next-button:disabled {
+    background: var(--rule);
+    color: var(--ink-faint);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.next-button svg {
+    transition: transform 0.2s ease;
+}
+
+.next-button:hover:not(:disabled) svg {
+    transform: translateX(3px);
+}
+
+.choice-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 2rem;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+/*** ECG plotting ***/
+.ecg-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 2rem;
+    border: 1px solid var(--rule);
+    background: #fff;
+}
+
+.ecg-grid {
+    display: grid;
+    grid-template-columns: repeat(2, max-content); 
+    gap: 0;
+    background: #fff;
+    height: 100%;
+}
+
+.lead-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.lead-label {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    color: #333;
+    z-index: 2;
+    pointer-events: none;
+}
+
+canvas {
+    display: block;
+}
+
+/*
+.lead-plot {
+    width: 100%;
+    height: 50mm; /* 5mV vertical range */
+    position: relative;
+    border: 1px solid #333;
+
+    /* Grid: 1mm small squares, 5mm large squares */
+    background-image:
+        linear-gradient(to right, rgba(255, 0, 0, 0.1) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 0, 0, 0.1) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 0, 0, 0.3) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 0, 0, 0.3) 1px, transparent 1px);
+    background-size: 1mm 1mm, 1mm 1mm, 5mm 5mm, 5mm 5mm;
+}
+
+
+/* Animations */
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.progress       { animation: fadeUp 0.5s ease both; animation-delay: 0.05s; }
+.question-text  { animation: fadeUp 0.5s ease both; animation-delay: 0.1s; }
+.divider        { animation: fadeUp 0.5s ease both; animation-delay: 0.15s; }
+.ecg-scroll-wrapper { animation: fadeUp 0.5s ease both; animation-delay: 0.2s; }
+textarea        { animation: fadeUp 0.5s ease both; animation-delay: 0.2s; }
+.char-count     { animation: fadeUp 0.5s ease both; animation-delay: 0.25s; }
+.actions        { animation: fadeUp 0.5s ease both; animation-delay: 0.3s; }
+
+*/
+
+{% endblock %}
+
+{% block content %}
+<div class="question-wrapper">
+
+    <!-- Progress indicator -->
+    <div class="progress">
+        {% for q_id in questions_range %}
+            <div class="progress-step {% if q_id <= question.id %}active{% endif %}"></div>
+        {% endfor %}
+        <span class="progress-label">Question {{ question.id }} of {{ questions_range|last }}</span>
+    </div>
+
+    <p class="question-text">{{ question.question_text }}</p>
+
+    <div class="divider"></div>
+
+</div>
+{% if signals %}
+
+<!-- ECG Question -->
+
+<div class="question-wrapper">
+    <div class="question-text">
+        <em>{{sex}}, {{ age }} years old</em>
+    </div>
+</div>
+
+<div class="ecg-scroll-wrapper">
+    <div class="ecg-grid" id="ecg-grid">
+        {% for name in lead_names %}
+            <div class="lead-wrapper">
+                <span class="lead-label">{{ name }}</span>
+                <canvas id="lead-{{ forloop.counter0 }}"></canvas>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="question-wrapper">
+    <form method="post" style="width: 100%; display: flex; flex-direction: column;">
+        {% csrf_token %}
+        <div class="choices">
+            <label class="choice-button" for="omi">
+                <input id="omi" type="radio" name="answer" value="OMI">
+                OMI
+
+            </label>
+            <label class="choice-button" for="nomi">
+                <input id="nomi" type="radio" name="answer" value="NOMI">
+                NOMI
+            </label>
+            <label class="choice-button" for="sane">
+                <input id="sane" type="radio" name="answer" value="Sane">
+                Sane
+            </label>
+            <label class="choice-button" for="other">
+                <input id="other" type="radio" name="answer" value="Other">
+                Other
+            </label>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="next-button" id="submit-btn">
+                {% if question.id == questions_range|last %}Submit{% else %}Next question{% endif %}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
+        
+
+{% else %}
+<div class="question-wrapper">
+    <!-- Text question -->
+    <form method="post" style="width: 100%; display: flex; flex-direction: column;">
+        {% csrf_token %}
+
+        <textarea
+            name="answer"
+            id="answer"
+            placeholder="Write your answer here…"
+            required
+            minlength="3"
+        >{{ form_data.answer|default:'' }}</textarea>
+
+        <span class="char-count" id="char-count">0 characters</span>
+
+        <div class="actions">
+            <button type="submit" class="next-button" id="submit-btn" disabled>
+                {% if question.id == questions_range|last %}
+                    Submit
+                {% else %}
+                    Next question
+                {% endif %}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+</div><!-- close question-wrapper -->
+{% endif %}
+
+
+{% if signals %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// -------------
+// Plotting ECGs
+// -------------
+(function() {
+
+    const rawData = {{ signals|safe }};
+    const fs = {{ fs }};
+    const leadNames = {{ lead_names|safe }};
+
+    // Physical constants
+    const MM_PER_S   = 24;     // 24 mm per second (x axis)
+    const MM_PER_MV  = 10;     // 10 mm per mV     (y axis)
+    const PX_PER_MM  = 96 / 25.4;   // screen DPI --> px/mm (~3.78) (25.4 mm/inch)
+
+    const PX_PER_S   = MM_PER_S  * PX_PER_MM;   // ~90.7 px/s
+    const PX_PER_MV  = MM_PER_MV * PX_PER_MM;   // ~37.8 px/mV
+
+    // ECG display window
+    const DISPLAY_SECONDS = 10;          // show 10 seconds of signal
+    const Y_MIN_MV = -2;                 // -2 mV
+    const Y_MAX_MV =  2;                 //  2 mV
+
+    // Canvas pixel dimensions (exact, not responsive)
+    const CANVAS_W = Math.round(DISPLAY_SECONDS * PX_PER_S);
+    const CANVAS_H = Math.round((Y_MAX_MV - Y_MIN_MV) * PX_PER_MV);
+
+    // Grid spacing in pixels
+    const SMALL_GRID_MM = 1;
+    const LARGE_GRID_MM = 5;
+    const SMALL_PX = SMALL_GRID_MM * PX_PER_MM;
+    const LARGE_PX = LARGE_GRID_MM * PX_PER_MM;
+
+    // Custom Chart.js plugin: draws ECG paper grid on canvas
+    const ecgGridPlugin = {
+        id: 'ecgGrid',
+        beforeDraw(chart) {
+            const { ctx, chartArea: {left, top, right, bottom } } = chart;
+            const w = right - left;
+            const h = bottom - top;
+
+            ctx.save();
+
+            // Small squares — light red, 1mm spacing
+            ctx.strokeStyle = 'rgba(220, 80, 80, 0.25)';
+            ctx.lineWidth   = 0.5;
+            for (let x = 0; x <= w; x += SMALL_PX) {
+                ctx.beginPath();
+                ctx.moveTo(left + x, top);
+                ctx.lineTo(left + x, bottom);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= h; y += SMALL_PX) {
+                ctx.beginPath();
+                ctx.moveTo(left, top + y);
+                ctx.lineTo(right, top + y);
+                ctx.stroke();
+            }
+
+            // Large squares — stronger red, 5mm spacing
+            ctx.strokeStyle = 'rgba(200, 50, 50, 0.5)';
+            ctx.lineWidth   = 0.8;
+            for (let x = 0; x <= w; x += LARGE_PX) {
+                ctx.beginPath();
+                ctx.moveTo(left + x, top);
+                ctx.lineTo(left + x, bottom);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= h; y += LARGE_PX) {
+                ctx.beginPath();
+                ctx.moveTo(left, top + y);
+                ctx.lineTo(right, top + y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+    };
+
+    leadNames.forEach((name, index) => {
+        const canvas = document.getElementById(`lead-${index}`);
+
+        // Set exact pixel dimensions — prevents Chart.js from resizing
+        canvas.width  = CANVAS_W;
+        canvas.height = CANVAS_H;
+        canvas.style.width  = CANVAS_W  + 'px';
+        canvas.style.height = CANVAS_H + 'px';
+
+        const signal = rawData[index];
+
+        // Subsample to DISPLAY_SECONDS worth of samples
+        const totalSamples = Math.min(signal.length, DISPLAY_SECONDS * fs);
+        const dataPoints = [];
+        for (let i = 0; i < totalSamples; i++) {
+            dataPoints.push({ x: i / fs, y: signal[i] });
+        }
+
+        new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            plugins: [ecgGridPlugin],
+            data: {
+                datasets: [{
+                    data: dataPoints,
+                    borderColor: '#000',
+                    borderWidth: 1.2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0
+                }]
+            },
+            options: {
+                responsive: false, // no auto-resize
+                maintainAspectRatio: false,
+                animation: false, // for performance
+                layout: {
+                    padding: 0
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: 0,
+                        max: DISPLAY_SECONDS,
+                        display: false, // no ticks since grid is drawn by plugin
+                        grid: {display: false},
+                    },
+                    y: {
+                        min: Y_MIN_MV,
+                        max: Y_MAX_MV,
+                        display: false,
+                        gird: {display: false}
+                    }
+                },
+                plugins: {
+                    legend: {display: false},
+                    tooltip: {enabled: false}
+                }
+            }
+        });
+    });
+})();
+
+// ----------------------
+// Managing radio buttons
+// ----------------------
+const radioButtons = Array.from(document.querySelectorAll('input[name=answer]'));
+const submitButton = document.getElementById('submit-btn');
+
+function update() {
+    console.log(!(!!radioButtons.filter(radio => radio.checked).length));
+    submitButton.disabled = !(!!radioButtons.filter(radio => radio.checked).length);
+}
+
+radioButtons.forEach(radio => {
+    radio.addEventListener('change', update);
+});
+
+update();
+</script>
+
+{% else %}
+
+<script>
+// ----------------------
+// Managing textarea form
+// ----------------------
+const textarea = document.getElementById('answer');
+const counter  = document.getElementById('char-count');
+const btn      = document.getElementById('submit-btn');
+const MIN      = 3;
+
+function update() {
+    const len = textarea.value.trim().length;
+    counter.textContent = len + ' character' + (len === 1 ? '' : 's');
+    btn.disabled = len < MIN;
+}
+
+textarea.addEventListener('input', update);
+update();
+</script>
+{% endif %}
+{% endblock %}
